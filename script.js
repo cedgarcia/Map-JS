@@ -19,9 +19,9 @@ class Workout {
   _setDescription() {
     // prettier-ignore
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    this.description = ` ${this.type[0].toUpperCase()} ${this.type.slice(
+    this.description = `${this.type[0].toUpperCase()} ${this.type.slice(
       1
-    )} on${months[this.date.getMonth()]}${this.date.getDate()}`;
+    )} on ${months[this.date.getMonth()]} ${this.date.getDate()}`;
   }
 }
 class Running extends Workout {
@@ -47,6 +47,7 @@ class Cycling extends Workout {
   }
   calcSpeed() {
     this.speed = this.distance / (this.duration / 60);
+    return this.speed;
   }
 }
 
@@ -55,14 +56,20 @@ class App {
   // PRIVATE FIELDS
   #map;
   #mapEvent;
+  #mapZoomLevel = 13;
   #workouts = [];
 
   constructor() {
     this._getPosition();
 
+    //
+    this._getLocalStorage();
+
     form.addEventListener('submit', this._newWorkout.bind(this));
 
     inputType.addEventListener('change', this._toggleElevetionField.bind(this));
+
+    containerWorkouts.addEventListener('click', this._moveToPopup.bind(this));
   }
 
   _getPosition() {
@@ -82,7 +89,7 @@ class App {
 
     // DISPLAY MAP
     console.log(this);
-    this.#map = L.map('map').setView(coords, 13);
+    this.#map = L.map('map').setView(coords, this.#mapZoomLevel);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:
@@ -93,12 +100,26 @@ class App {
 
     console.log(latitude, longitude);
     console.log(`https://www.google.com/maps/@${latitude},${longitude}`);
+
+    this.#workouts.forEach((work) => {
+      this._renderWorkoutMarker(work);
+    });
   }
 
   _showForm(mapE) {
     this.#mapEvent = mapE;
     form.classList.remove('hidden');
     inputDistance.focus();
+  }
+  _hideForm() {
+    inputCadence.value =
+      inputDistance.value =
+      inputDuration.value =
+      inputElevation.value =
+        '';
+    form.style.display = 'none';
+    form.classList.add('hidden');
+    setTimeout(() => (form.style.display = 'grid')), 1000;
   }
   _toggleElevetionField() {
     inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
@@ -156,12 +177,10 @@ class App {
     this._renderWorkout(workout);
 
     // Hide Clear   fields
+    this._hideForm();
 
-    inputCadence.value =
-      inputDistance.value =
-      inputDuration.value =
-      inputElevation.value =
-        '';
+    // SET LOCAL STORAGE
+    this._setLocalStorage();
   }
   _renderWorkoutMarker(workout) {
     // MARKER THAT ADDS TO THE MAP
@@ -176,7 +195,9 @@ class App {
           className: `${workout.type}-popup`,
         })
       )
-      .setPopupContent('workout')
+      .setPopupContent(
+        `${workout.type === 'running' ? '🏃‍♂️' : '🚴‍♀️'} ${workout.description}`
+      )
       .openPopup();
   }
   _renderWorkout(workout) {
@@ -225,7 +246,39 @@ class App {
         </li>
         `;
 
-    form.insertAdjacentElement('afterend', html);
+    form.insertAdjacentHTML('afterend', html);
+  }
+
+  _moveToPopup(e) {
+    const workoutEl = e.target.closest('.workout');
+
+    if (!workoutEl) return;
+
+    const workout = this.#workouts.find(
+      (work) => work.id === workoutEl.dataset.id
+    );
+
+    this.#map.setView(workout.coords, this.#mapZoomLevel),
+      {
+        animate: true,
+        pan: {
+          duration: 1,
+        },
+      };
+  }
+  _setLocalStorage() {
+    localStorage.setItem('workouts', JSON.stringify(this.#workouts));
+  }
+  _getLocalStorage() {
+    const data = JSON.parse(localStorage.getItem('workouts'));
+
+    if (!data) return;
+
+    this.#workouts = data;
+
+    this.#workouts.forEach((work) => {
+      this._renderWorkout(work);
+    });
   }
 }
 
