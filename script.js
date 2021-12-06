@@ -88,7 +88,7 @@ class App {
     const coords = [latitude, longitude];
 
     // DISPLAY MAP
-    console.log(this);
+
     this.#map = L.map('map').setView(coords, this.#mapZoomLevel);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -97,9 +97,6 @@ class App {
     }).addTo(this.#map);
     // HANDLE CLICK ON MAP
     this.#map.on('click', this._showForm.bind(this));
-
-    console.log(latitude, longitude);
-    console.log(`https://www.google.com/maps/@${latitude},${longitude}`);
 
     this.#workouts.forEach((work) => {
       this._renderWorkoutMarker(work);
@@ -279,6 +276,10 @@ class App {
     this.#workouts.forEach((work) => {
       this._renderWorkout(work);
     });
+  }
+  reset() {
+    localStorage.removeItem('workouts');
+    location.reload();
   }
 }
 
